@@ -1,0 +1,27 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
+SET(GLFW_DIR thirdparty/glfw-3.1.1)
+SET(GLFW_SOURCE_DIR thirdparty/glfw-3.1.1/)
+SET(GLEW_DIR thirdparty/glew-1.12.0/)
+
+PROJECT (main C)
+
+#FIND_PACKAGE(<`2:PkgConfig REQUIRED`>)
+
+#PKG_SEARCH_MODULE(GLFW REQUIRED glfw3)
+
+ADD_SUBDIRECTORY(${GLFW_SOURCE_DIR})
+
+ADD_EXECUTABLE(main main.c)
+
+INCLUDE_DIRECTORIES(
+    ${GLFW_DIR}/include
+    ${GLEW_DIR}/include
+)
+
+#ADD_SUBDIRECTORY(<`0:src`>)
+
+
+TARGET_LINK_LIBRARIES(main glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES})
+
+
