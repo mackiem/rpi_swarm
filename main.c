@@ -14,6 +14,63 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
+// ---------------- shader stuff ----------------------//
+
+typedef enum { VERTEX, FRAGMENT, GEOMETRY } ShaderType;
+
+int read_file(const char* filename, char** buffer) {
+    FILE* fp = fopen(filename, "r");
+    if (!fp)
+        goto f_read_error;
+
+
+    // get length of eof
+    size_t file_len;
+
+    if (fseek(fp, 0L, SEEK_END) == 0) {
+        file_len = ftell(fp);
+        if (file_len == -1) {
+            goto f_read_error;
+        }
+        if (fseek(fp, 0L, SEEK_SET) != 0) {
+            goto f_read_error;
+        }
+        *buffer = (char*) malloc(sizeof(char) * (file_len + 1));
+        printf("file len: %d\n", file_len);
+        int output = fread(*buffer, sizeof(char), file_len, fp);
+        printf("output : %d\n", output);
+        if (output != file_len) {
+            goto f_read_error;
+        };
+    } else {
+        f_read_error: ;
+        char error_msg[1024];
+        sprintf(error_msg, "Unable to read file : %s", filename);
+        perror(error_msg);
+        if (buffer) {
+            free(buffer);
+        }
+        if (fp) {
+            fclose(fp);
+        }
+        return -1;
+    }
+    return 1;
+}
+
+static void compile_shader(const char* filename, ShaderType shader_type) {
+    char* source = NULL;
+    read_file(filename, &source);
+    if (source) {
+        printf("%s\n", source);
+        free(source);
+    }
+
+}
+
+// --------------- shader stuff ----------------------//
+
+
 int main(int argc, char** argv)
 {
     GLFWwindow* window;
@@ -29,6 +86,8 @@ int main(int argc, char** argv)
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
     glfwSetKeyCallback(window, key_callback);
+
+    compile_shader("resources/vert.vert", VERTEX);
 
     while (!glfwWindowShouldClose(window))
     {
