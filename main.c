@@ -1,8 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>
+
+#define SUCCESS_CODE 1
+#define ERROR_CODE -1
+#define ERROR_MSG_LEN 1024
 
 static void error_callback(int error, const char* description)
 {
@@ -18,54 +23,100 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 typedef enum { VERTEX, FRAGMENT, GEOMETRY } ShaderType;
 
-int read_file(const char* filename, char** buffer) {
-    FILE* fp = fopen(filename, "r");
-    if (!fp)
-        goto f_read_error;
-
-
-    // get length of eof
-    size_t file_len;
-
-    if (fseek(fp, 0L, SEEK_END) == 0) {
-        file_len = ftell(fp);
-        if (file_len == -1) {
-            goto f_read_error;
-        }
-        if (fseek(fp, 0L, SEEK_SET) != 0) {
-            goto f_read_error;
-        }
-        *buffer = (char*) malloc(sizeof(char) * (file_len + 1));
-        printf("file len: %d\n", file_len);
-        int output = fread(*buffer, sizeof(char), file_len, fp);
-        printf("output : %d\n", output);
-        if (output != file_len) {
-            goto f_read_error;
-        };
-    } else {
-        f_read_error: ;
-        char error_msg[1024];
-        sprintf(error_msg, "Unable to read file : %s", filename);
-        perror(error_msg);
-        if (buffer) {
-            free(buffer);
-        }
-        if (fp) {
-            fclose(fp);
-        }
-        return -1;
+char* handle_file_read_error(FILE* fp, char* buffer, const char* filename) {
+    char error_msg[ERROR_MSG_LEN];
+    // let's trunc filenames larger than 255, to not overflow error_msg buffer
+    /*char safe_filename[256];*/
+    /*memcpy(safe_filename, filename, 255);*/
+    /*safe_filename[255] = '\0';*/
+    snprintf(error_msg, ERROR_MSG_LEN, "Unable to read file : %s", filename);
+    if (buffer) {
+        free(buffer);
     }
-    return 1;
+    if (fp) {
+        fclose(fp);
+    }
+    return NULL;
 }
 
-static void compile_shader(const char* filename, ShaderType shader_type) {
-    char* source = NULL;
-    read_file(filename, &source);
-    if (source) {
-        printf("%s\n", source);
-        free(source);
+char* read_file(const char* filename) {
+    char* buffer;
+    FILE* fp = fopen(filename, "rb");
+    if (!fp) {
+        return handle_file_read_error(fp, buffer, filename);
     }
 
+    long file_len;
+    if (fseek(fp, 0L, SEEK_END) != 0) {
+        return handle_file_read_error(fp, buffer, filename);
+    }
+    file_len = ftell(fp);
+    if (file_len == -1) {
+        return handle_file_read_error(fp, buffer, filename);
+    }
+    if (fseek(fp, 0L, SEEK_SET) != 0) {
+        return handle_file_read_error(fp, buffer, filename);
+    }
+    buffer = (char*) calloc((file_len + 1), sizeof(char));
+    int output = fread(buffer, sizeof(char), file_len, fp);
+
+    if (output != file_len) {
+        return handle_file_read_error(fp, buffer, filename);
+    };
+    // calloc takes care of \0
+    /*(*buffer, filename)[file_len] = '\0';*/
+    return buffer;
+}
+
+int handle_GL_error() {
+    GLuint error_code;
+    if ((error_code = glGetError()) != GL_NO_ERROR) {
+        fprintf(stderr, "Error in GL code : %s", gluErrorString(error_code));
+        return ERROR_CODE;
+    }
+    return SUCCESS_CODE;
+}
+
+int compile_shader(const char* filename, ShaderType shader_type, GLuint* shader) {
+    char* source;
+    source = read_file(filename);
+
+    if (!source) {
+        char error_msg[ERROR_MSG_LEN];
+        snprintf(error_msg, ERROR_MSG_LEN, "%s : read_file()", filename);
+        perror(error_msg);
+        return ERROR_CODE;
+    }
+
+    GLuint shader_id;
+    switch (shader_type) {
+        case VERTEX: {
+                         shader_id = glCreateShader(GL_VERTEX_SHADER);
+                         break;
+                     }
+        case FRAGMENT: {
+                           shader_id = glCreateShader(GL_FRAGMENT_SHADER);
+                           break;
+                       }
+    }
+    glShaderSource(shader_id, 1, &source, NULL);
+    if (!handle_GL_error()) {
+        return ERROR_CODE;
+    }
+    glCompileShader(shader_id);
+    GLint status;
+    glGetShaderiv(shader_id, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        GLint log_length;
+        glGetShaderiv(shader_id, GL_INFO_LOG_LENGTH, &log_length);
+        char log[log_length];
+        glGetShaderInfoLog(shader_id, log_length, NULL, log);
+        fprintf(stderr, "Shader %s compilation error: %s", filename, log);
+        return ERROR_CODE;
+    } else {
+        *shader = shader_id;
+        return SUCCESS_CODE;
+    }
 }
 
 // --------------- shader stuff ----------------------//
@@ -87,7 +138,8 @@ int main(int argc, char** argv)
     glfwSwapInterval(1);
     glfwSetKeyCallback(window, key_callback);
 
-    compile_shader("resources/vert.vert", VERTEX);
+    GLuint vtx_shader;
+    compile_shader("resource/vert.vert", VERTEX, &vtx_shader);
 
     while (!glfwWindowShouldClose(window))
     {
