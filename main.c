@@ -2,8 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#define GLEW_STATIC
+#include <GL/glew.h>
+
 #define GLFW_INCLUDE_GLU
 #include <GLFW/glfw3.h>
+
 
 #define SUCCESS_CODE 1
 #define ERROR_CODE -1
@@ -71,7 +75,7 @@ char* read_file(const char* filename) {
 int handle_GL_error() {
     GLuint error_code;
     if ((error_code = glGetError()) != GL_NO_ERROR) {
-        fprintf(stderr, "Error in GL code : %s", gluErrorString(error_code));
+        fprintf(stderr, "Error in GL code : %s", glewGetErrorString(error_code));
         return ERROR_CODE;
     }
     return SUCCESS_CODE;
@@ -98,6 +102,9 @@ int compile_shader(const char* filename, ShaderType shader_type, GLuint* shader)
                            shader_id = glCreateShader(GL_FRAGMENT_SHADER);
                            break;
                        }
+        default: {
+
+                 }
     }
     glShaderSource(shader_id, 1, &source, NULL);
     if (!handle_GL_error()) {
@@ -149,20 +156,6 @@ int main(int argc, char** argv)
         ratio = width / (float) height;
         glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT);
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        glRotatef((float) glfwGetTime() * 50.f * 10.f, 0.f, 0.f, 1.f);
-        glBegin(GL_TRIANGLES);
-        glColor3f(1.f, 0.f, 0.f);
-        glVertex3f(-0.6f, -0.4f, 0.f);
-        glColor3f(0.f, 1.f, 0.f);
-        glVertex3f(0.6f, -0.4f, 0.f);
-        glColor3f(0.f, 0.f, 1.f);
-        glVertex3f(0.f, 0.6f, 0.f);
-        glEnd();
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

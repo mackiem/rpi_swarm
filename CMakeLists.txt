@@ -1,8 +1,12 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+find_package(PkgConfig REQUIRED)
 
-SET(GLFW_DIR thirdparty/glfw-3.1.1)
-SET(GLFW_SOURCE_DIR thirdparty/glfw-3.1.1/)
-SET(GLEW_DIR thirdparty/glew-1.12.0/)
+pkg_search_module(GLFW REQUIRED glfw3)
+pkg_search_module(GLEW REQUIRED glew)
+
+#SET(GLFW_DIR thirdparty/glfw-3.1.1)
+#SET(GLFW_SOURCE_DIR thirdparty/glfw-3.1.1/)
+#SET(GLEW_DIR thirdparty/glew-1.12.0/)
 
 PROJECT (main C)
 
@@ -10,18 +14,19 @@ PROJECT (main C)
 
 #PKG_SEARCH_MODULE(GLFW REQUIRED glfw3)
 
-ADD_SUBDIRECTORY(${GLFW_SOURCE_DIR})
+#ADD_SUBDIRECTORY(${GLFW_SOURCE_DIR})
 
 ADD_EXECUTABLE(main main.c)
 
 INCLUDE_DIRECTORIES(
-    ${GLFW_DIR}/include
-    ${GLEW_DIR}/include
+    ${GLFW_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
 )
 
 #ADD_SUBDIRECTORY(<`0:src`>)
 
 
-TARGET_LINK_LIBRARIES(main glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES})
+#TARGET_LINK_LIBRARIES(main glfw )
+TARGET_LINK_LIBRARIES(main ${GLEW_STATIC_LIBRARIES} ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} GL)
 
 
